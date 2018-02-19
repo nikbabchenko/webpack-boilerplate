@@ -1,6 +1,8 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackPugPlugin = require('html-webpack-pug-plugin');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 // Is the current build a development build
 const IS_DEV = (process.env.NODE_ENV === 'dev');
@@ -8,7 +10,9 @@ const IS_DEV = (process.env.NODE_ENV === 'dev');
 const dirNode = 'node_modules';
 const dirApp = path.join(__dirname, 'app');
 const dirAssets = path.join(__dirname, 'assets');
-
+const stylesPath = path.join(__dirname, 'assets/styles');
+// generate css
+const extractSASS = new ExtractTextPlugin({ filename: 'app.css' })
 const appHtmlTitle = 'Webpack Boilerplate';
 
 /**
@@ -19,7 +23,7 @@ module.exports = {
         vendor: [
             'lodash'
         ],
-        bundle: path.join(dirApp, 'index')
+        bundle: path.join(dirApp, 'main')
     },
     resolve: {
         modules: [
@@ -39,9 +43,12 @@ module.exports = {
         }),
 
         new HtmlWebpackPlugin({
-            template: path.join(__dirname, 'index.ejs'),
-            title: appHtmlTitle
-        })
+            // Required
+            inject: true,
+            template: `!!pug-loader!${path.join(dirApp, "index.pug")}`,
+            title: 'My App'
+          }),
+        extractSASS
     ],
     module: {
         rules: [
@@ -72,30 +79,13 @@ module.exports = {
             // CSS / SASS
             {
                 test: /\.scss/,
-                use: [
-                    'style-loader',
+                use: extractSASS.extract(
                     {
-                        loader: 'css-loader',
-                        options: {
-                            sourceMap: IS_DEV
-                        }
-                    },
-                    {
-                        loader: 'sass-loader',
-                        options: {
-                            sourceMap: IS_DEV,
-                            includePaths: [dirAssets]
-                        }
+                        fallback: 'style-loader',
+                        use: [ { loader: 'css-loader', options: { importLoaders: 1 } }, 'postcss-loader', 'sass-loader' ]
                     }
-                ]
+                )
             },
-
-            // EJS
-            {
-                test: /\.ejs$/,
-                loader: 'ejs-loader'
-            },
-
             // IMAGES
             {
                 test: /\.(jpe?g|png|gif)$/,
